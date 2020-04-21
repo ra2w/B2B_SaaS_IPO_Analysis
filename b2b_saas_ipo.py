@@ -240,7 +240,7 @@ def saas_box_plot(df,var1,x_label1,y_label1,axes,plot_type='box',title='',axis='
 
 
 
-def main(filename='ipo_db.csv',
+def main(filename='data/ipo_db.csv',
          req_cols=['rev_growth','arr__m','arr_growth','net_cash','capital_raised'],
          filter_cols = ['rrr__m','rev_growth',
                         'arr__m','arr_growth',
@@ -258,10 +258,8 @@ def main(filename='ipo_db.csv',
                         'market_cap__m','name']):
     df = load_table(filename)
     df = remove_na(df,req_cols)
-    # If we're doing IPO analysis
-    if (filename == 'ipo_db.csv'):
-        add_net_raised(df)
-        add_burn_efficiency(df)
+    add_net_raised(df)
+    add_burn_efficiency(df)
     if (filter_cols):
         df = df[filter_cols]
     print("\nTotal companies (N) = {}".format(df.shape[0]))
