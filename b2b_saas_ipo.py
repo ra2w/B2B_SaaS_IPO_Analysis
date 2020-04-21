@@ -45,126 +45,12 @@ col_names = ['name',
     'net_cash'] #'net_dollar_retention','ltm_magic_number']
 
 
-main_file_name = '/Users/ramu/IPO/large_set_comp_04_01_20.csv'
-augment_file_name = '/Users/ramu/IPO/augment_set_comp_04_01_20.csv'
-market_cap_file_name = '/Users/ramu/IPO/market_cap_04_02_20.csv'
-master_file_name = '/Users/ramu/IPO/b2b_master_comp_04_01_20.csv'
-VERBOSE = False
-
-
 def normalize_column_names(df):
     # remove $ and whitespace from column names; add _ between words, add __m for $m
     df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_').str.replace('(', '').str.replace(')', '').str.replace('$','_').str.replace('/','_').str.replace('%','pct')
     if ('revenue_growth' in df.columns):
         df['rev_growth'] = df.revenue_growth
 
-'''
-load_capital_raised_csv()
-Load CSV spreadsheet that contains total capital raised from Cruchbase
-All amounts are in $M
-Format: ticker, capital_raised
-'''
-def load_capital_raised_csv():
-    # Load table for total capital raised
-    if (USE_SMALL_DATA_SET):
-        datas_path = small_file_name+'_raised.csv'
-    else:
-        datas_path = large_file_name+'_raised.csv'
-    df_k = pd.read_csv(datas_path)
-    df_k= df_k.set_index('ticker')
-    df_k=df_k.dropna(axis='rows',how='all')
-    df_k=df_k.dropna(axis='columns',how='all')
-
-    # Clean up capital raised table
-    # Remove $ signs and % signs
-    #df_k = df_k.replace(to_replace ='\$', value = '', regex = True)
-    #df_k = df_k.replace(to_replace ='\%', value = '', regex = True)
-    #df_k = df_k.replace(to_replace ='\,', value = '', regex = True)
-
-    df_k.capital_raised = pd.to_numeric(df_k.capital_raised,downcast='float')
-    return df_k
-
-'''
-load_augment_csv()
-Load augmented spreadsheet that contains data for companies
-missing in main csv
-
-All amounts are in $M
-Format: ticker, arr__m, arr_growth, effective_cash
-'''
-def load_augment_csv():
-   # Load augment
-    df_a = pd.read_csv(augment_file_name)
-    df_a = df_a.set_index('ticker')
-    df_a = df_a.dropna(axis='rows',how='all')
-    df_a = df_a.dropna(axis='columns',how='all')
-    df_a = df_a.drop(labels='name',axis='columns')
-    return df_a
-
-def load_market_cap_csv():
-    df_mkt = pd.read_csv(market_cap_file_name)
-    df_mkt= df_mkt.set_index('ticker')
-    df_mkt=df_mkt.dropna(axis='rows',how='all')
-    df_mkt=df_mkt.dropna(axis='columns',how='all')
-    df_mkt = df_mkt.replace(to_replace ='\$', value = '', regex = True)
-    df_mkt = df_mkt.replace(to_replace ='\%', value = '', regex = True)
-    df_mkt = df_mkt.replace(to_replace ='\,', value = '', regex = True)
-    normalize_column_names(df_mkt)
-    df_mkt = df_mkt[['market_cap__m','ipo_year']]
-    df_mkt.market_cap__m = pd.to_numeric(df_mkt.market_cap__m,downcast='float')
-    return df_mkt
-
-'''
-load_main_csv()
-Load main spreadsheet that contains data for recent B2B SaaS companies @ IPO
-
-All $ amounts are in $M
-Format: see csv file
-'''
-
-def load_main_csv():
-    df_master = pd.read_csv(master_file_name)
-    df_master = df_master.set_index('ticker')
-    df_master=df_master.dropna(how='all')
-    #df_master=df_master.dropna(axis='columns',how='all')
-    normalize_column_names(df_master)
-
-    df = pd.read_csv(main_file_name)
-    df = df.set_index('ticker')
-    df=df.dropna(how='all')
-    df=df.dropna(axis='columns',how='all')
-    # remove last two rows because they contain summary stats and no companies
-    df = df.head(-2)
-    normalize_column_names(df)
-    df = df[~df.index.duplicated()]
-
-
-    df_master.update(df)
-
-    #df_master = df_master[col_names]
-    # remove Eventbrite. data is incorrect
-    df_master=df_master[df_master.name!='Eventbrite']
-    df_master=df_master[df_master.name!='Dynatrace']
-    df_master=df_master[df_master.name!='Nutanix']
-    df_master=df_master[df_master.name!='Ringcentral']
-
-
-
-    # Clean up main table:
-    # Remove all $ signs
-    # Remove all percent signs
-    # Change IPO year from float to int
-    # Change Founding year from float to int
-    df_master = df_master.replace(to_replace ='\$', value = '', regex = True)
-    df_master = df_master.replace(to_replace ='\%', value = '', regex = True)
-    df_master.ipo_year = pd.to_numeric(df_master.ipo_year,downcast = 'unsigned')
-    df_master.founding_year = pd.to_numeric(df_master.founding_year,downcast = 'unsigned')
-    df_master.arr__m = pd.to_numeric(df_master.arr__m,downcast = 'float')
-    df_master.arr_growth = pd.to_numeric(df_master.arr_growth,downcast = 'float')
-
-    df_master.net_cash = pd.to_numeric(df_master.net_cash,downcast = 'float')
-    print("Full IPO dataset: {} companies".format(df_master.shape[0]))
-    return df_master
 
 def merge_data(df,df_k,df_a,df_mkt):
     df_m = pd.merge(df,df_k,on=['ticker'],how='left')
@@ -206,22 +92,6 @@ augment_file_name = '/Users/ramu/IPO/augment_set_comp_04_01_20.csv'
 USE_SMALL_DATA_SET = False
 VERBOSE = False
 
-
-
-
-def old_main(verbose=False,col_names=['arr__m','arr_growth','effective_cash']):
-
-    VERBOSE = verbose
-    df_main = load_main_csv()
-    df_k = load_capital_raised_csv()
-    df_a = load_augment_csv()
-    df_mkt = load_market_cap_csv()
-
-    df = merge_data(df_main,df_k,df_a,df_mkt)
-    #df = remove_na(df,col_names)
-
-    print("Filtered dataset: {} companies".format(df.shape[0]))
-    return (df,df_main,df_a,df_k,df_mkt)
 
 # Revenue analysis
 rev_req_cols =['rrr__m','rev_growth','net_cash','capital_raised'],
