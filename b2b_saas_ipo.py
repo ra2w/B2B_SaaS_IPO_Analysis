@@ -6,6 +6,7 @@ Email: ramu@acapital.com
 '''
 
 import matplotlib as mp
+import matplotlib.ticker as mticker  
 from matplotlib import pyplot as plt
 import pandas as pd
 import numpy as np
@@ -106,11 +107,14 @@ def remove_na(df,col_names):
 def add_burn_efficiency(df):
     def burn_calc(f,ef):
         # $ burned to get to $100M
-        df[ef] = df.net_raised / df[f]*100
+        df[ef] = df.net_raised / df[f]
         #df[ef][df[ef].lt(0)] = max(df[ef])
         #df[ef][df[ef].gt(4.75)] = 4.75
     burn_calc('arr__m','arr_ef')
     burn_calc('rrr__m','rev_ef')
+    df['p_cash'] = df['net_cash'].where(df['net_cash'] >0, 0)
+    df['cap_ef_cash'] = (df.p_cash + df.arr__m)/df.capital_raised
+    df['cap_ef'] = df.arr__m/df.capital_raised
 
 def add_net_raised(df):
     df['net_raised'] = (df.capital_raised-df.net_cash)
@@ -194,7 +198,7 @@ def saas_plot_hist(title,df,x_min=2,x_lim=5,bins=8,param='rev_ef',market_cap_min
     df_t = df[(df.market_cap__m>=market_cap_min) & (df[param] <= x_lim) & (df[param].notna())]
     x,r = pd.qcut(df_t[param],bins,retbins=True)
 
-    df_1 = df_t[df_t.type == 'bot_up_ent']
+    df_1 = df_t[df_t.type == 'Bottom-Up SaaS']
 
     fig1, f1_axes = plt.subplots(ncols=3, constrained_layout=True,figsize = (16, 4))
     sns.distplot(df_1[param],hist=True,kde_kws={'clip': (x_min, x_lim)},bins=r,ax=f1_axes[0])
@@ -202,7 +206,7 @@ def saas_plot_hist(title,df,x_min=2,x_lim=5,bins=8,param='rev_ef',market_cap_min
 
     #,hist_kws={"histtype": "step", "linewidth": 3, "alpha": 1, "color": "g"})
 
-    df_2 = df_t[df_t.type == 'top_down_ent']
+    df_2 = df_t[df_t.type == 'Top-Down SaaS']
     sns.distplot(df_2[param],hist=True,kde_kws={'clip': (x_min, x_lim)},bins=r,ax=f1_axes[2])
     #hist_kws={"histtype": "step", "linewidth": 3, "alpha": 1, "color": "b"})
 
@@ -223,11 +227,11 @@ def print_stats(str,df,col):
 # print box plots for two variables side by side
 # even though the name of the function in saas_box_plot it can also do violin plots!
 
-def saas_box_plot(df,var1,x_label1,y_label1,axes,plot_type='box',title='',axis='left',showfliers=False):
+def saas_box_plot(df,var1,x_label1,y_label1,axes,plot_type='box',title='',axis='left',showfliers=False,whis=1.5):
 
     df_v1 = df[df[var1].notna()]
     if plot_type == 'box':
-        ax1 = sns.boxplot(x='type', y=var1,data=df_v1, ax=axes,showfliers = False)
+        ax1 = sns.boxplot(x='type', y=var1,data=df_v1, ax=axes,showfliers=showfliers,whis=whis)
     else:
         ax1 = sns.violinplot(x=var1,y="all",hue="type",data=df,split=True,ax=axes,palette='deep',inner='quartile')
 
@@ -244,7 +248,7 @@ def main(filename='data/ipo_db.csv',
          req_cols=['rev_growth','arr__m','arr_growth','net_cash','capital_raised'],
          filter_cols = ['rrr__m','rev_growth',
                         'arr__m','arr_growth',
-                        'arr_ef','rev_ef',
+                        'arr_ef','rev_ef','cap_ef','p_cash','cap_ef_cash',
                         'ltm_median_payback_period',
                         'net_cash',
                         'founding_year','ipo_year',
